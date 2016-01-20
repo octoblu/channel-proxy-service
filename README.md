@@ -1,15 +1,15 @@
-# octoblu-channel-proxy-service
+# channel-proxy-service
 
-[![Dependency status](http://img.shields.io/david/octoblu/octoblu-channel-proxy-service.svg?style=flat)](https://david-dm.org/octoblu/octoblu-channel-proxy-service)
-[![devDependency Status](http://img.shields.io/david/dev/octoblu/octoblu-channel-proxy-service.svg?style=flat)](https://david-dm.org/octoblu/octoblu-channel-proxy-service#info=devDependencies)
-[![Build Status](http://img.shields.io/travis/octoblu/octoblu-channel-proxy-service.svg?style=flat&branch=master)](https://travis-ci.org/octoblu/octoblu-channel-proxy-service)
+[![Dependency status](http://img.shields.io/david/octoblu/channel-proxy-service.svg?style=flat)](https://david-dm.org/octoblu/channel-proxy-service)
+[![devDependency Status](http://img.shields.io/david/dev/octoblu/channel-proxy-service.svg?style=flat)](https://david-dm.org/octoblu/channel-proxy-service#info=devDependencies)
+[![Build Status](http://img.shields.io/travis/octoblu/channel-proxy-service.svg?style=flat&branch=master)](https://travis-ci.org/octoblu/channel-proxy-service)
 
-[![NPM](https://nodei.co/npm/octoblu-channel-proxy-service.svg?style=flat)](https://npmjs.org/package/octoblu-channel-proxy-service)
+[![NPM](https://nodei.co/npm/channel-proxy-service.svg?style=flat)](https://npmjs.org/package/channel-proxy-service)
 
 ## Installing
 
 ```bash
-$ npm install octoblu-channel-proxy-service
+$ npm install channel-proxy-service
 ```
 
 ### Usage
