@@ -6,9 +6,9 @@ errorHandler       = require 'errorhandler'
 meshbluHealthcheck = require 'express-meshblu-healthcheck'
 meshbluAuth        = require 'express-meshblu-auth'
 MeshbluConfig      = require 'meshblu-config'
-debug              = require('debug')('octoblu-channel-proxy-service:server')
+debug              = require('debug')('channel-proxy-service:server')
 Router             = require './router'
-OctobluChannelProxyService = require './services/octoblu-channel-proxy-service'
+ChannelProxyService = require './services/channel-proxy-service'
 
 class Server
   constructor: ({@disableLogging, @port}, {@meshbluConfig})->
@@ -29,8 +29,8 @@ class Server
 
     app.options '*', cors()
 
-    octobluChannelProxyService = new OctobluChannelProxyService
-    router = new Router {@meshbluConfig, octobluChannelProxyService}
+    channelProxyService = new ChannelProxyService
+    router = new Router {@meshbluConfig, channelProxyService}
 
     router.route app
 

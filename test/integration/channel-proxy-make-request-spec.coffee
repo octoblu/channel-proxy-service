@@ -3,7 +3,7 @@ request = require 'request'
 shmock  = require '@octoblu/shmock'
 Server  = require '../../src/server'
 
-describe 'Hello', ->
+describe 'Make Request', ->
   beforeEach (done) ->
     @meshblu = shmock 0xd00d
 
@@ -27,7 +27,7 @@ describe 'Hello', ->
   afterEach (done) ->
     @meshblu.close done
 
-  describe 'On GET /hello', ->
+  describe 'when the service succeeds', ->
     beforeEach (done) ->
       userAuth = new Buffer('some-uuid:some-token').toString 'base64'
 
@@ -37,7 +37,7 @@ describe 'Hello', ->
         .reply 200, uuid: 'some-uuid', token: 'some-token'
 
       options =
-        uri: '/hello'
+        uri: '/request'
         baseUrl: "http://localhost:#{@serverPort}"
         auth:
           username: 'some-uuid'
@@ -52,31 +52,3 @@ describe 'Hello', ->
 
     it 'should return a 200', ->
       expect(@response.statusCode).to.equal 200
-
-  describe 'when the service yields an error', ->
-    beforeEach (done) ->
-      userAuth = new Buffer('some-uuid:some-token').toString 'base64'
-
-      @authDevice = @meshblu
-        .get '/v2/whoami'
-        .set 'Authorization', "Basic #{userAuth}"
-        .reply 200, uuid: 'some-uuid', token: 'some-token'
-
-      options =
-        uri: '/hello'
-        baseUrl: "http://localhost:#{@serverPort}"
-        auth:
-          username: 'some-uuid'
-          password: 'some-token'
-        qs:
-          hasError: true
-        json: true
-
-      request.get options, (error, @response, @body) =>
-        done error
-
-    it 'should auth handler', ->
-      @authDevice.done()
-
-    it 'should return a 755 because ya', ->
-      expect(@response.statusCode).to.equal 755

@@ -1,11 +1,11 @@
-OctobluChannelProxyController = require './controllers/octoblu-channel-proxy-controller'
+ChannelProxyController = require './controllers/channel-proxy-controller'
 
 class Router
-  constructor: ({@octobluChannelProxyService}) ->
+  constructor: ({@channelProxyService}) ->
   route: (app) =>
-    octobluChannelProxyController = new OctobluChannelProxyController {@octobluChannelProxyService}
+    channelProxyController = new ChannelProxyController {@channelProxyService}
 
-    app.get '/hello', octobluChannelProxyController.hello
+    app.get '/request', channelProxyController.makeRequest
     # e.g. app.put '/resource/:id', someController.update
 
 module.exports = Router
