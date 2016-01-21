@@ -6,7 +6,7 @@ shmock        = require '@octoblu/shmock'
 Server        = require '../../src/server'
 ChannelConfig = require '../../src/models/channel-config'
 
-describe 'Make Request', ->
+describe 'Weather Make Request', ->
   beforeEach ->
     @mongoDbUri = 'octoblu-test-database'
     @database = mongojs @mongoDbUri, ['users', 'flows']
@@ -52,84 +52,207 @@ describe 'Make Request', ->
   afterEach (done) ->
     @weather.close done
 
-  describe 'when a user is stored in mongo', ->
+  describe 'when a flows is stored in mongo', ->
     beforeEach (done) ->
-      user =
-        skynet: {
-          uuid: 'user-uuid'
-        }
-        resource: {
-          uuid: 'user-uuid'
-        }
-        api: [
-          {
+      flow =
+        flowId: 'flow-uuid'
+        resource:
+          owner:
+            uuid: 'user-uuid'
+      @database.flows.insert flow, done
+
+    describe 'when a user is stored in mongo', ->
+      beforeEach (done) ->
+        user =
+          resource:
+            uuid: 'user-uuid'
+          api: [
             authtype: "none",
             channelid: ObjectId("5337a38d76a65b9693bc2a9f"),
             _id: ObjectId("569fc2fd0c626601000186ee"),
             type: "channel:weather",
             uuid: "channel-weather-uuid"
-          }
-        ]
-      @database.users.insert user, done
+          ]
+        @database.users.insert user, done
 
-      describe 'when a flows is stored in mongo with the user id', ->
+      describe 'when the service succeeds', ->
         beforeEach (done) ->
-          flow =
-            resource:
-              owner:
-                uuid: 'user-uuid'
-          @database.flows.insert flow, done
+          flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
 
-        describe 'when the service succeeds', ->
-          beforeEach (done) ->
-            flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
+          @authDevice = @meshblu
+            .get '/v2/whoami'
+            .set 'Authorization', "Basic #{flowAuth}"
+            .reply 200, uuid: 'flow-uuid', token: 'flow-token'
 
-            @authDevice = @meshblu
-              .get '/v2/whoami'
-              .set 'Authorization', "Basic #{flowAuth}"
-              .reply 200, uuid: 'flow-uuid', token: 'flow-token'
+          @getWeather = @weather
+            .get '/temperature/fahrenheit'
+            .query city: 'Tempe', state: 'AZ'
+            .reply 200,
+              temperature: 73.418,
+              city: 'Tempe',
+              state: 'AZ'
 
-            @getWeather = @weather
-              .get '/temperature/fahrenheit'
-              .query city: 'Tempe', state: 'AZ'
-              .reply 200,
-                temperature: 73.418,
-                city: 'Tempe',
+          options =
+            uri: '/request'
+            baseUrl: "http://localhost:#{@serverPort}"
+            auth:
+              username: 'flow-uuid'
+              password: 'flow-token'
+            json:
+              channelid: '5337a38d76a65b9693bc2a9f'
+              channelActivationId: '569fc2fd0c626601000186ee'
+              uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+              type: 'channel:weather'
+              headerParams: {},
+              urlParams: {},
+              queryParams:
+                city: 'Tempe'
                 state: 'AZ'
+              bodyParams: {},
+              url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
+              method: 'GET'
 
-            options =
-              uri: '/request'
-              baseUrl: "http://localhost:#{@serverPort}"
-              auth:
-                username: 'flow-uuid'
-                password: 'flow-token'
-              json:
-                channelid: '5337a38d76a65b9693bc2a9f'
-                channelActivationId: '569fc2fd0c626601000186ee'
-                uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
-                type: 'channel:weather'
-                headerParams: {},
-                urlParams: {},
-                queryParams:
-                  city: 'Tempe'
-                  state: 'AZ'
-                bodyParams: {},
-                url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
-                method: 'GET'
+          request.post options, (error, @response, @body) => done error
 
-            request.post options, (error, @response, @body) => done error
+        it 'should auth handler', ->
+          @authDevice.done()
 
-          it 'should auth handler', ->
-            @authDevice.done()
+        it 'should get the weather', ->
+          @getWeather.done()
 
-          it 'should get the weather', ->
-            @getWeather.done()
+        it 'should return a 200', ->
+          expect(@response.statusCode).to.equal 200
 
-          it 'should return a 200', ->
-            expect(@response.statusCode).to.equal 200
+        it 'should return a body', ->
+          expect(@body).to.deep.equal
+            temperature: 73.418
+            city: 'Tempe'
+            state: 'AZ'
 
-          it 'should return a body', ->
-            expect(@body).to.deep.equal
-              temperature: 73.418
+      describe 'when the service success but the channel fails', ->
+        beforeEach (done) ->
+          flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
+
+          @authDevice = @meshblu
+            .get '/v2/whoami'
+            .set 'Authorization', "Basic #{flowAuth}"
+            .reply 200, uuid: 'flow-uuid', token: 'flow-token'
+
+          @getWeather = @weather
+            .get '/temperature/fahrenheit'
+            .query city: 'Tempe', state: 'AZ'
+            .reply 500
+
+          options =
+            uri: '/request'
+            baseUrl: "http://localhost:#{@serverPort}"
+            auth:
+              username: 'flow-uuid'
+              password: 'flow-token'
+            json:
+              channelid: '5337a38d76a65b9693bc2a9f'
+              channelActivationId: '569fc2fd0c626601000186ee'
+              uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+              type: 'channel:weather'
+              headerParams: {},
+              urlParams: {},
+              queryParams:
+                city: 'Tempe'
+                state: 'AZ'
+              bodyParams: {},
+              url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
+              method: 'GET'
+
+          request.post options, (error, @response, @body) => done error
+
+        it 'should auth handler', ->
+          @authDevice.done()
+
+        it 'should get the weather', ->
+          @getWeather.done()
+
+        it 'should return a 500', ->
+          expect(@response.statusCode).to.equal 500
+
+        it 'should return a body', ->
+          expect(@body).to.be.empty
+
+    describe 'when a user is not in mongo it should fail', ->
+      beforeEach (done) ->
+        flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
+
+        @authDevice = @meshblu
+          .get '/v2/whoami'
+          .set 'Authorization', "Basic #{flowAuth}"
+          .reply 200, uuid: 'flow-uuid', token: 'flow-token'
+
+        options =
+          uri: '/request'
+          baseUrl: "http://localhost:#{@serverPort}"
+          auth:
+            username: 'flow-uuid'
+            password: 'flow-token'
+          json:
+            channelid: '5337a38d76a65b9693bc2a9f'
+            channelActivationId: '569fc2fd0c626601000186ee'
+            uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+            type: 'channel:weather'
+            headerParams: {},
+            urlParams: {},
+            queryParams:
               city: 'Tempe'
               state: 'AZ'
+            bodyParams: {},
+            url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
+            method: 'GET'
+
+        request.post options, (error, @response, @body) => done error
+
+      it 'should auth handler', ->
+        @authDevice.done()
+
+      it 'should return a 403', ->
+        expect(@response.statusCode).to.equal 403
+
+      it 'should return a body', ->
+        expect(@body).to.deep.equal error: 'Unauthorized User'
+
+  describe 'when a flows is missing in the database', ->
+    beforeEach (done) ->
+      flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
+
+      @authDevice = @meshblu
+        .get '/v2/whoami'
+        .set 'Authorization', "Basic #{flowAuth}"
+        .reply 200, uuid: 'flow-uuid', token: 'flow-token'
+
+      options =
+        uri: '/request'
+        baseUrl: "http://localhost:#{@serverPort}"
+        auth:
+          username: 'flow-uuid'
+          password: 'flow-token'
+        json:
+          channelid: '5337a38d76a65b9693bc2a9f'
+          channelActivationId: '569fc2fd0c626601000186ee'
+          uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+          type: 'channel:weather'
+          headerParams: {},
+          urlParams: {},
+          queryParams:
+            city: 'Tempe'
+            state: 'AZ'
+          bodyParams: {},
+          url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
+          method: 'GET'
+
+      request.post options, (error, @response, @body) => done error
+
+    it 'should auth handler', ->
+      @authDevice.done()
+
+    it 'should return a 403', ->
+      expect(@response.statusCode).to.equal 403
+
+    it 'should return a body', ->
+      expect(@body).to.deep.equal error: 'Unauthorized Flow'
