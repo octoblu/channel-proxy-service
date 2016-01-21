@@ -39,10 +39,12 @@
     "express": "^4.13.3",
     "express-meshblu-auth": "^2.0.0",
     "express-meshblu-healthcheck": "^1.0.1",
+    "jsonfile": "^2.2.3",
     "lodash": "^3.10.1",
     "meshblu-config": "^3.1.1",
     "mongojs": "^2.3.0",
-    "morgan": "^1.6.1"
+    "morgan": "^1.6.1",
+    "s3": "^4.4.0"
   },
   "peerDependencies": {},
   "engines": {

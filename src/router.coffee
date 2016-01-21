@@ -5,7 +5,6 @@ class Router
   route: (app) =>
     channelProxyController = new ChannelProxyController {@channelProxyService}
 
-    app.get '/request', channelProxyController.makeRequest
-    # e.g. app.put '/resource/:id', someController.update
+    app.post '/request', channelProxyController.makeRequest
 
 module.exports = Router

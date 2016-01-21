@@ -50,13 +50,6 @@ describe 'Make Request', ->
             _id: ObjectId("569fc2fd0c626601000186ee"),
             type: "channel:weather",
             uuid: "channel-weather-uuid"
-          },
-          {
-            authtype: "none",
-            channelid: ObjectId("53275d4841da719147d9e36a"),
-            _id: ObjectId("569fc2fd0c626601000186ef"),
-            type: "channel:stock-price",
-            uuid: "channel-stock-price-uuid"
           }
         ]
       @collection.insert user, done
@@ -76,9 +69,13 @@ describe 'Make Request', ->
           auth:
             username: 'some-uuid'
             password: 'some-token'
-          json: true
+          json:
+            channelid: '5337a38d76a65b9693bc2a9f'
+            channelActivationId: '569fc2fd0c626601000186ee'
+            uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+            type: 'channel:weather'
 
-        request.get options, (error, @response, @body) => done error
+        request.post options, (error, @response, @body) => done error
 
       it 'should auth handler', ->
         @authDevice.done()
