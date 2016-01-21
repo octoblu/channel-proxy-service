@@ -1,17 +1,18 @@
-cors               = require 'cors'
-morgan             = require 'morgan'
-express            = require 'express'
-bodyParser         = require 'body-parser'
-errorHandler       = require 'errorhandler'
-meshbluHealthcheck = require 'express-meshblu-healthcheck'
-meshbluAuth        = require 'express-meshblu-auth'
-MeshbluConfig      = require 'meshblu-config'
-debug              = require('debug')('channel-proxy-service:server')
-Router             = require './router'
+cors                = require 'cors'
+morgan              = require 'morgan'
+express             = require 'express'
+bodyParser          = require 'body-parser'
+errorHandler        = require 'errorhandler'
+meshbluHealthcheck  = require 'express-meshblu-healthcheck'
+meshbluAuth         = require 'express-meshblu-auth'
+MeshbluConfig       = require 'meshblu-config'
+debug               = require('debug')('channel-proxy-service:server')
+Router              = require './router'
 ChannelProxyService = require './services/channel-proxy-service'
+UsersModel          = require './models/users'
 
 class Server
-  constructor: ({@disableLogging, @port}, {@meshbluConfig})->
+  constructor: ({@disableLogging, @port}, {@meshbluConfig, @users, @channelConfig})->
     @meshbluConfig ?= new MeshbluConfig().toJSON()
 
   address: =>
@@ -29,7 +30,8 @@ class Server
 
     app.options '*', cors()
 
-    channelProxyService = new ChannelProxyService
+    usersModel = new UsersModel {@users}
+    channelProxyService = new ChannelProxyService {@channelConfig, usersModel}
     router = new Router {@meshbluConfig, channelProxyService}
 
     router.route app

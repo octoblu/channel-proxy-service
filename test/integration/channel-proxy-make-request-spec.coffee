@@ -1,15 +1,16 @@
-http       = require 'http'
-request    = require 'request'
-mongojs    = require 'mongojs'
-{ObjectId} = require 'mongojs'
-shmock     = require '@octoblu/shmock'
-Server     = require '../../src/server'
+http          = require 'http'
+request       = require 'request'
+mongojs       = require 'mongojs'
+{ObjectId}    = require 'mongojs'
+shmock        = require '@octoblu/shmock'
+Server        = require '../../src/server'
+ChannelConfig = require '../../src/models/channel-config'
 
 describe 'Make Request', ->
   beforeEach (done) ->
     database = mongojs 'octoblu-test-database', ['users']
-    @collection = database.users
-    @collection.remove => done()
+    @users = database.users
+    @users.remove => done()
 
   beforeEach (done) ->
     @meshblu = shmock 0xd00d
@@ -22,7 +23,15 @@ describe 'Make Request', ->
       server: 'localhost'
       port: 0xd00d
 
-    @server = new Server serverOptions, {meshbluConfig, @collection}
+    channelConfig = new ChannelConfig {}
+    channelConfig.fetch = sinon.stub().yields null
+
+    channelConfig._channels = [
+      require('../data/github-channel.json'),
+      require('../data/weather-channel.json')
+    ]
+
+    @server = new Server serverOptions, {meshbluConfig, @users, channelConfig}
 
     @server.run =>
       @serverPort = @server.address().port
@@ -38,10 +47,10 @@ describe 'Make Request', ->
     beforeEach (done) ->
       user =
         skynet: {
-          uuid: 'some-uuid'
+          uuid: 'user-uuid'
         }
         resource: {
-          uuid: 'some-uuid'
+          uuid: 'user-uuid'
         }
         api: [
           {
@@ -52,28 +61,30 @@ describe 'Make Request', ->
             uuid: "channel-weather-uuid"
           }
         ]
-      @collection.insert user, done
+      @users.insert user, done
 
     describe 'when the service succeeds', ->
       beforeEach (done) ->
-        userAuth = new Buffer('some-uuid:some-token').toString 'base64'
+        flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
 
         @authDevice = @meshblu
           .get '/v2/whoami'
-          .set 'Authorization', "Basic #{userAuth}"
-          .reply 200, uuid: 'some-uuid', token: 'some-token'
+          .set 'Authorization', "Basic #{flowAuth}"
+          .reply 200, uuid: 'flow-uuid', token: 'flow-token'
 
         options =
           uri: '/request'
           baseUrl: "http://localhost:#{@serverPort}"
           auth:
-            username: 'some-uuid'
-            password: 'some-token'
+            username: 'flow-uuid'
+            password: 'flow-token'
           json:
-            channelid: '5337a38d76a65b9693bc2a9f'
-            channelActivationId: '569fc2fd0c626601000186ee'
-            uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
-            type: 'channel:weather'
+            userUuid: 'user-uuid'
+            config:
+              channelid: '5337a38d76a65b9693bc2a9f'
+              channelActivationId: '569fc2fd0c626601000186ee'
+              uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+              type: 'channel:weather'
 
         request.post options, (error, @response, @body) => done error
 
@@ -81,4 +92,4 @@ describe 'Make Request', ->
         @authDevice.done()
 
       it 'should return a 200', ->
-        expect(@response.statusCode).to.equal 200
+        expect(@response.statusCode).to.equal 200, @body
