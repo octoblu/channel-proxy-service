@@ -1,16 +1,27 @@
+_           = require 'lodash'
+request     = require 'request'
 OauthConfig = require '../models/oauth-config'
+RequestFormatter = require '../models/request-formatter'
 
 class ChannelProxyService
-  constructor: ({@channelConfig, @usersModel}) ->
+  constructor: ({@channelConfig, @users, @flows}) ->
+    @requestFormatter = new RequestFormatter
+    @oauthConfig = new OauthConfig {@channelConfig}
 
-  makeRequest: ({userUuid, config}, callback) =>
-    @usersModel.get userUuid, (error, userData) =>
+  makeRequest: ({flowUuid, config}, callback) =>
+    @flows.getUserUuidForFlow flowUuid, (error, userUuid) => 
       return callback @_createError 500, error.message if error?
-      @channelConfig.fetch (error) =>
+      @users.get userUuid, (error, userData) =>
         return callback @_createError 500, error.message if error?
-        oauthConfig = new OauthConfig {@channelConfig}
-        oauth = oauthConfig.get userData, config
-        callback()
+        @channelConfig.fetch (error) =>
+          return callback @_createError 500, error.message if error?
+
+          oauthConfig = @oauthConfig.get userData, config
+          config = _.defaultsDeep {}, config, oauthConfig
+          requestOptions = @requestFormatter.format config
+          request requestOptions, (error, response, body) =>
+            return callback @_createError 500, error.message if error?
+            callback null, statusCode: response.statusCode, body: body
 
   _createError: (code, message) =>
     error = new Error message

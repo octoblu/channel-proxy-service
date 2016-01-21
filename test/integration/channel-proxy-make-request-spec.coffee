@@ -7,13 +7,19 @@ Server        = require '../../src/server'
 ChannelConfig = require '../../src/models/channel-config'
 
 describe 'Make Request', ->
+  beforeEach ->
+    @mongoDbUri = 'octoblu-test-database'
+    @database = mongojs @mongoDbUri, ['users', 'flows']
+
   beforeEach (done) ->
-    database = mongojs 'octoblu-test-database', ['users']
-    @users = database.users
-    @users.remove => done()
+    @database.users.remove => done()
+
+  beforeEach (done) ->
+    @database.flows.remove => done()
 
   beforeEach (done) ->
     @meshblu = shmock 0xd00d
+    @weather = shmock 0xbabe
 
     serverOptions =
       port: undefined,
@@ -31,7 +37,7 @@ describe 'Make Request', ->
       require('../data/weather-channel.json')
     ]
 
-    @server = new Server serverOptions, {meshbluConfig, @users, channelConfig}
+    @server = new Server serverOptions, {meshbluConfig, @mongoDbUri, channelConfig}
 
     @server.run =>
       @serverPort = @server.address().port
@@ -42,6 +48,9 @@ describe 'Make Request', ->
 
   afterEach (done) ->
     @meshblu.close done
+
+  afterEach (done) ->
+    @weather.close done
 
   describe 'when a user is stored in mongo', ->
     beforeEach (done) ->
@@ -61,35 +70,66 @@ describe 'Make Request', ->
             uuid: "channel-weather-uuid"
           }
         ]
-      @users.insert user, done
+      @database.users.insert user, done
 
-    describe 'when the service succeeds', ->
-      beforeEach (done) ->
-        flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
+      describe 'when a flows is stored in mongo with the user id', ->
+        beforeEach (done) ->
+          flow =
+            resource:
+              owner:
+                uuid: 'user-uuid'
+          @database.flows.insert flow, done
 
-        @authDevice = @meshblu
-          .get '/v2/whoami'
-          .set 'Authorization', "Basic #{flowAuth}"
-          .reply 200, uuid: 'flow-uuid', token: 'flow-token'
+        describe 'when the service succeeds', ->
+          beforeEach (done) ->
+            flowAuth = new Buffer('flow-uuid:flow-token').toString 'base64'
 
-        options =
-          uri: '/request'
-          baseUrl: "http://localhost:#{@serverPort}"
-          auth:
-            username: 'flow-uuid'
-            password: 'flow-token'
-          json:
-            userUuid: 'user-uuid'
-            config:
-              channelid: '5337a38d76a65b9693bc2a9f'
-              channelActivationId: '569fc2fd0c626601000186ee'
-              uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
-              type: 'channel:weather'
+            @authDevice = @meshblu
+              .get '/v2/whoami'
+              .set 'Authorization', "Basic #{flowAuth}"
+              .reply 200, uuid: 'flow-uuid', token: 'flow-token'
 
-        request.post options, (error, @response, @body) => done error
+            @getWeather = @weather
+              .get '/temperature/fahrenheit'
+              .query city: 'Tempe', state: 'AZ'
+              .reply 200,
+                temperature: 73.418,
+                city: 'Tempe',
+                state: 'AZ'
 
-      it 'should auth handler', ->
-        @authDevice.done()
+            options =
+              uri: '/request'
+              baseUrl: "http://localhost:#{@serverPort}"
+              auth:
+                username: 'flow-uuid'
+                password: 'flow-token'
+              json:
+                channelid: '5337a38d76a65b9693bc2a9f'
+                channelActivationId: '569fc2fd0c626601000186ee'
+                uuid: 'e56842b0-5e2e-11e5-8abf-b33a470ad64b'
+                type: 'channel:weather'
+                headerParams: {},
+                urlParams: {},
+                queryParams:
+                  city: 'Tempe'
+                  state: 'AZ'
+                bodyParams: {},
+                url: "http://localhost:#{0xbabe}/temperature/fahrenheit",
+                method: 'GET'
 
-      it 'should return a 200', ->
-        expect(@response.statusCode).to.equal 200, @body
+            request.post options, (error, @response, @body) => done error
+
+          it 'should auth handler', ->
+            @authDevice.done()
+
+          it 'should get the weather', ->
+            @getWeather.done()
+
+          it 'should return a 200', ->
+            expect(@response.statusCode).to.equal 200
+
+          it 'should return a body', ->
+            expect(@body).to.deep.equal
+              temperature: 73.418
+              city: 'Tempe'
+              state: 'AZ'

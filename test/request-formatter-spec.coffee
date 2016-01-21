@@ -1,8 +1,8 @@
-ChannelDeviceFormatter = require '../src/models/channel-request-formatter'
+RequestFormatter = require '../src/models/request-formatter'
 
-describe 'ChannelDeviceFormatter', ->
+describe 'RequestFormatter', ->
   beforeEach ->
-    @sut = new ChannelDeviceFormatter
+    @sut = new RequestFormatter
 
   describe '->setting params', ->
     describe 'bodyParams', ->

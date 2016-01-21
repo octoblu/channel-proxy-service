@@ -1,7 +1,7 @@
 _   = require 'lodash'
 url = require 'url'
 
-class ChannelRequestFormatter
+class RequestFormatter
   BasicAuthStrategy: (config) =>
     auth:
       username: config.oauth.access_token
@@ -109,7 +109,7 @@ class ChannelRequestFormatter
 
   format: (config) =>
     @buildRequestParameters config
-    
+
   _generateRequestParams: (uri, config, bodyParams, body) =>
     # clean up querystring and place it in the queryParams
     parsedUri = url.parse(uri, true)
@@ -159,4 +159,4 @@ class ChannelRequestFormatter
     _.omit object, (value) =>
       _.isObject(value) && _.isEmpty(value)
 
-module.exports = ChannelRequestFormatter
+module.exports = RequestFormatter

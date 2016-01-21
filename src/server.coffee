@@ -10,9 +10,11 @@ debug               = require('debug')('channel-proxy-service:server')
 Router              = require './router'
 ChannelProxyService = require './services/channel-proxy-service'
 UsersModel          = require './models/users'
+FlowsModel          = require './models/flows'
+mongojs             = require 'mongojs'
 
 class Server
-  constructor: ({@disableLogging, @port}, {@meshbluConfig, @users, @channelConfig})->
+  constructor: ({@disableLogging, @port}, {@meshbluConfig, @mongoDbUri, @channelConfig})->
     @meshbluConfig ?= new MeshbluConfig().toJSON()
 
   address: =>
@@ -30,8 +32,10 @@ class Server
 
     app.options '*', cors()
 
-    usersModel = new UsersModel {@users}
-    channelProxyService = new ChannelProxyService {@channelConfig, usersModel}
+    database = mongojs @mongoDbUri, ['users', 'flows']
+    flows = new FlowsModel {flows: database.flows}
+    users = new UsersModel {users: database.users}
+    channelProxyService = new ChannelProxyService {@channelConfig, users, flows}
     router = new Router {@meshbluConfig, channelProxyService}
 
     router.route app
